@@ -28,19 +28,25 @@ function SearchResults({ query, onPaperSelect, shouldSearch, onSearchComplete })
 
     try {
       const data = await searchPapers(query, page, RESULTS_PER_PAGE);
+      console.log('API response:', data);
       if (data?.results) {
-        setSearchState({
+        const pagination = {
+          page: data.pagination.page,
+          total: data.pagination.total,
+          totalPages: data.pagination.total_pages,
+          hasNext: data.pagination.has_next,
+          hasPrev: data.pagination.has_prev,
+        };
+        console.log('Setting pagination:', pagination);
+        console.log('Calculated total pages:', Math.ceil(data.pagination.total / RESULTS_PER_PAGE));
+        const newState = {
           results: data.results,
-          pagination: {
-            page: data.pagination.page,
-            total: data.pagination.total,
-            totalPages: data.pagination.total_pages,
-            hasNext: data.pagination.has_next,
-            hasPrev: data.pagination.has_prev,
-          },
+          pagination,
           loading: false,
           error: null,
-        });
+        };
+        console.log('Setting new search state:', newState);
+        setSearchState(newState);
 
         if (data.pagination.has_next) {
           prefetchNextPage(query, page + 1, RESULTS_PER_PAGE);
@@ -75,7 +81,11 @@ function SearchResults({ query, onPaperSelect, shouldSearch, onSearchComplete })
 
   const renderPagination = () => {
     const { page, totalPages } = searchState.pagination;
-    if (totalPages <= 1) return null;
+    console.log('Rendering pagination:', { page, totalPages });
+    if (totalPages <= 1) {
+      console.log('Not rendering pagination - only 1 page');
+      return null;
+    }
     const pages = [];
     const maxVisible = 5;
     let start = Math.max(1, page - Math.floor(maxVisible / 2));
@@ -83,6 +93,7 @@ function SearchResults({ query, onPaperSelect, shouldSearch, onSearchComplete })
     if (end - start + 1 < maxVisible) {
       start = Math.max(1, end - maxVisible + 1);
     }
+    console.log('Pagination range:', { start, end });
 
     if (start > 1) {
       pages.push(

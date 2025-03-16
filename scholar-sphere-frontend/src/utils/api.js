@@ -54,16 +54,18 @@ const clearOldCache = () => {
     let oldestTimestamp = Date.now();
     
     // Find the oldest cached item
+    console.log('Clearing old cache - current size:', getCacheStats());
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       try {
         const cached = JSON.parse(localStorage.getItem(key));
+        console.log('Checking cache item:', key, 'timestamp:', cached.timestamp);
         if (cached.timestamp < oldestTimestamp) {
           oldestKey = key;
           oldestTimestamp = cached.timestamp;
         }
       } catch (err) {
-        // Remove invalid cache entries
+        console.log('Removing invalid cache entry:', key);
         localStorage.removeItem(key);
       }
     }
@@ -113,8 +115,10 @@ const searchPapersImmediate = async (query, page = 1, perPage = 10) => {
       }
     };
     
+    console.log('Cache stats before:', getCacheStats());
     // Cache the results
     setCache(cacheKey, formattedData);
+    console.log('Cache stats after:', getCacheStats());
     
     return formattedData;
   } catch (error) {
@@ -248,3 +252,5 @@ export const getCacheStats = () => {
     sizeKB: Math.round(size / 1024),
   };
 };
+
+

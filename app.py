@@ -11,7 +11,6 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from dotenv import load_dotenv
 import requests
-import redis
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
@@ -22,11 +21,6 @@ ssl_context = ssl.create_default_context(cafile=certifi.where())
 
 # Load environment variables
 load_dotenv()
-
-# Initialize Redis
-redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
-redis_client = redis.from_url(redis_url, decode_responses=True)
-CACHE_DURATION = 3600  # 1 hour in seconds
 
 def async_route(f):
     @wraps(f)
@@ -40,17 +34,11 @@ OPENALEX_API_URL = 'https://api.openalex.org'
 EMAIL = os.getenv('EMAIL', 'mahdi.fayad@gmail.com')
 
 async def fetch_paper_details(session, paper_id):
-    cache_key = f"paper:{paper_id}"
-    cached = redis_client.get(cache_key)
-    if cached:
-        return json.loads(cached)
-        
     async with session.get(
         f'{OPENALEX_API_URL}/works/{paper_id}',
         headers={'User-Agent': f'mailto:{EMAIL}'}
     ) as response:
         data = await response.json()
-        redis_client.setex(cache_key, CACHE_DURATION, json.dumps(data))
         return data
 
 # Helper functions for OpenAlex data conversion
@@ -184,12 +172,6 @@ http.mount("http://", adapter)
 
 async def search_papers_with_cache(session, query, cursor=None, per_page=25):
     """Search papers with Redis caching and cursor pagination"""
-    cache_key = f"search:{query}:{cursor}:{per_page}"
-    cached_data = redis_client.get(cache_key)
-    
-    if cached_data:
-        return json.loads(cached_data)
-    
     try:
         # Split query by commas for filtering
         keywords = [k.strip() for k in query.split(',') if k.strip()]
@@ -220,8 +202,7 @@ async def search_papers_with_cache(session, query, cursor=None, per_page=25):
                 return None
             data = await response.json()
             if data:
-                redis_client.setex(cache_key, CACHE_DURATION // 2, json.dumps(data))
-            return data
+                return data
     except Exception as e:
         print(f"Error in search: {e}")
         return None
@@ -277,20 +258,6 @@ async def fetch_paper_with_cache(session, paper_id, params=None):
             
         print(f"Processing paper ID: {paper_id}")
         
-        cache_key = f"paper:{paper_id}"
-        cached_data = redis_client.get(cache_key)
-        
-        if cached_data:
-            print(f"Cache hit for paper {paper_id}")
-            try:
-                data = json.loads(cached_data)
-                if data and data.get('id'):  # Validate cached data
-                    return data
-                print(f"Invalid cached data for paper {paper_id}")
-            except json.JSONDecodeError:
-                print(f"Corrupted cache for paper {paper_id}")
-            # If cache is invalid or corrupted, continue to fetch from API
-            
         if not params:
             params = {
                 'select': 'id,title,abstract_inverted_index,publication_year,authorships,cited_by_count,referenced_works,cited_by_api_url,concepts,type,doi,primary_location,concepts'
@@ -328,8 +295,7 @@ async def fetch_paper_with_cache(session, paper_id, params=None):
                     return None
                     
                 # Cache the valid response
-                redis_client.setex(cache_key, CACHE_DURATION, json.dumps(data))
-                print(f"Successfully fetched and cached paper {paper_id}")
+                    print(f"Successfully fetched and cached paper {paper_id}")
                 return data
                 
             except json.JSONDecodeError as e:

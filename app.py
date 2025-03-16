@@ -555,4 +555,8 @@ async def get_papers():
         return jsonify({'error': f'Error processing papers: {str(e)}'}), 500
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5013)
+    import os
+    host = os.environ.get('HOST', '0.0.0.0')
+    port = int(os.environ.get('PORT', 5013))
+    debug = os.environ.get('FLASK_ENV') == 'development'
+    app.run(host=host, port=port, debug=debug)

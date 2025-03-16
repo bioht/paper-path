@@ -38,10 +38,41 @@ const setCache = (key, data) => {
   }
 };
 
+// Maximum cache size in MB
+const MAX_CACHE_SIZE_MB = 5;
+
 const clearOldCache = () => {
+  // First remove expired items
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     getCache(key); // This will remove if expired
+  }
+  
+  // If still over quota, remove oldest items
+  while (getCacheStats().sizeKB > MAX_CACHE_SIZE_MB * 1024) {
+    let oldestKey = null;
+    let oldestTimestamp = Date.now();
+    
+    // Find the oldest cached item
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      try {
+        const cached = JSON.parse(localStorage.getItem(key));
+        if (cached.timestamp < oldestTimestamp) {
+          oldestKey = key;
+          oldestTimestamp = cached.timestamp;
+        }
+      } catch (err) {
+        // Remove invalid cache entries
+        localStorage.removeItem(key);
+      }
+    }
+    
+    if (oldestKey) {
+      localStorage.removeItem(oldestKey);
+    } else {
+      break;
+    }
   }
 };
 

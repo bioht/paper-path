@@ -132,7 +132,7 @@ function NetworkGraph({ paper, onClose }) {
   const [expandingStats, setExpandingStats] = useState({ cites: 0 });
 
   // Import API base URL
-  const API_BASE_URL = 'https://paper-path.onrender.com';
+  const API_BASE_URL = 'https://paper-path-production.up.railway.app';
   
   // Paper data cache
   const paperCache = useRef(new Map());

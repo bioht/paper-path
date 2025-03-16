@@ -24,7 +24,8 @@ ssl_context = ssl.create_default_context(cafile=certifi.where())
 load_dotenv()
 
 # Initialize Redis
-redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
+redis_client = redis.from_url(redis_url, decode_responses=True)
 CACHE_DURATION = 3600  # 1 hour in seconds
 
 def async_route(f):
@@ -157,7 +158,7 @@ def transform_paper(paper):
             'references':[ref.split('/')[-1] for ref in paper.get('referenced_works') or []]
         }
 
-app = Flask(__name__, static_folder='../scholar-sphere-frontend/build', static_url_path='/')
+app = Flask(__name__, static_folder='scholar-sphere-frontend/build', static_url_path='/')
 
 # Configure CORS
 CORS(app)

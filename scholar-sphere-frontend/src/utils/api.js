@@ -1,7 +1,7 @@
 import { debounce } from 'lodash';
 
 // API configuration
-const API_BASE_URL = 'https://paper-path.onrender.com';
+const API_BASE_URL = 'https://paper-path-production.up.railway.app';
 // Cache configuration
 const CACHE_DURATION = 3600000; // 1 hour
 const DEBOUNCE_WAIT = 300; // 300ms debounce for search

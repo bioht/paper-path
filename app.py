@@ -161,7 +161,14 @@ def transform_paper(paper):
 app = Flask(__name__, static_folder='scholar-sphere-frontend/build', static_url_path='/')
 
 # Configure CORS
-CORS(app)
+CORS(app, resources={
+    r"/*": {
+        "origins": [
+            "https://paper-path-pt3roqwim-mahdis-projects-dae8e69a.vercel.app",
+            "https://paper-path-hazel.vercel.app"
+        ]
+    }
+})
 
 @app.route('/')
 def serve():

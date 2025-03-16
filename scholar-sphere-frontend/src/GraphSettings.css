@@ -1,0 +1,251 @@
+/* Range input styling */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--panel-color, #333);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--panel-color, #333);
+  cursor: pointer;
+  border: none;
+  transition: transform 0.1s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover,
+input[type="range"]::-webkit-slider-thumb:active,
+input[type="range"]::-moz-range-thumb:hover,
+input[type="range"]::-moz-range-thumb:active {
+  transform: scale(1.2);
+}
+/* Panel container */
+.settings-panel {
+    position: relative;
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto;
+    border-radius: 12px;
+    background: white;
+    box-shadow: 0 2px 16px rgba(188, 146, 29, 0.1);
+    padding: 1px;
+}
+
+.settings-content {
+    width: 100%;
+    overflow: visible;
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    width: 100%;
+}
+
+.setting-group {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.slider-group {
+    flex: 2;
+}
+
+.setting-group:not(.slider-group) {
+    flex: 1;
+}
+
+input[type="range"] {
+    width: 100%;
+    min-width: 0;
+}
+
+.description {
+    font-size: 0.8em;
+    color: #666;
+}
+
+.year-range-inputs {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.year-range-inputs input {
+    width: 70px;
+}
+
+input[type="range"] {
+    width: 100%;
+    max-width: 100%;
+}
+
+  /* Collapsed state: only show the header row */
+  .settings-panel.collapsed {
+    height: 32px;
+    padding: 8px 12px;
+    overflow: hidden;
+  }
+  
+  /* Expanded state: show the full content */
+  .settings-panel.expanded {
+    height: auto;
+    min-height: fit-content;
+    padding: 12px;
+    overflow: visible;
+  }
+  
+  /* Panel header */
+  .settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .settings-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  
+  .toggle-panel-btn {
+    font-size: 18px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+  }
+  .toggle-panel-btn:hover {
+    opacity: 1;
+  }
+  
+  /* Panel content container */
+  .settings-grid {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-right: 16px;
+  }
+  
+  .setting-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+
+  .setting-group label {
+    font-size: 13px;
+    color: #666;
+    margin-right: 4px;
+  }
+  
+  /* Basic setting group style */
+  .setting-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    white-space: nowrap;
+    min-width: max-content;
+  }
+  
+  .setting-group label {
+    font-weight: 500;
+    color: #333;
+    font-size: 14px;
+  }
+  
+  /* Range slider style */
+  .setting-group input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: #ddd;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    margin: 4px 0;
+  }
+  .setting-group input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #0077cc;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+  .setting-group input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+  }
+  .setting-group input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #0077cc;
+    cursor: pointer;
+    border: none;
+  }
+  
+  /* Year range inputs side by side */
+  .year-range-inputs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .year-range-inputs input[type="number"] {
+    width: 70px;
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+  }
+  
+  /* Text below the slider, smaller and grayer */
+  .description {
+    font-size: 12px;
+    color: #666;
+    margin-top: -2px;
+  }
+  
+  /* Basic text fields & selects */
+  .setting-group input[type="number"],
+  .setting-group select {
+    padding: 6px 8px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+  }
+  
+  /* Toggle checkboxes row */
+  .toggle-group-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .toggle-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .toggle-group input[type="checkbox"] {
+    accent-color: #0077cc;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }

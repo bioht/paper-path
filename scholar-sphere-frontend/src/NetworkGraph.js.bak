@@ -1,0 +1,1069 @@
+// src/NetworkGraph.js
+import React, { useEffect, useRef, useState } from 'react';
+import * as d3 from 'd3';
+import './NetworkGraph.css';
+
+// Predefined themes
+const THEMES = {
+  default: {
+    background: '#ffffff',
+    node: {
+      fill: '#69b3a2',
+      stroke: '#2c786c',
+      highlightFill: '#004c6d',
+      highlightStroke: '#004c6d',
+      textColor: '#333333'
+    },
+    link: {
+      stroke: '#b8b8b8',
+      highlightStroke: '#004c6d'
+    }
+  },
+  dark: {
+    background: '#1a1a1a',
+    node: {
+      fill: '#4a90e2',
+      stroke: '#357abd',
+      highlightFill: '#81c784',
+      highlightStroke: '#81c784',
+      textColor: '#ffffff'
+    },
+    link: {
+      stroke: '#4f4f4f',
+      highlightStroke: '#81c784'
+    }
+  },
+  sunset: {
+    background: '#2c3e50',
+    node: {
+      fill: '#e74c3c',
+      stroke: '#c0392b',
+      highlightFill: '#f39c12',
+      highlightStroke: '#f39c12',
+      textColor: '#ecf0f1'
+    },
+    link: {
+      stroke: '#34495e',
+      highlightStroke: '#f39c12'
+    }
+  },
+  nature: {
+    background: '#f4f1de',
+    node: {
+      fill: '#81b29a',
+      stroke: '#3d405b',
+      highlightFill: '#e07a5f',
+      highlightStroke: '#e07a5f',
+      textColor: '#3d405b'
+    },
+    link: {
+      stroke: '#3d405b',
+      highlightStroke: '#e07a5f'
+    }
+  }
+};
+
+// Paper Info Panel Component
+const PaperInfoPanel = React.memo(({ paper, onClose }) => {
+  if (!paper) return null;
+
+  const formatAuthors = authors => {
+    if (!authors) return '';
+    if (Array.isArray(authors)) {
+      return authors.join(', ');
+    }
+    return authors;
+  };
+
+  return (
+    <div 
+      className={`paper-info-panel`}
+      style={{
+        top: '20px',
+        right: '20px',
+      }}
+    >
+      <button 
+        className="close-button" 
+        onClick={onClose}
+        aria-label="Close panel"
+      >
+        ×
+      </button>
+      <h3>{paper.title}</h3>
+      <div className="authors">{formatAuthors(paper.authors)}</div>
+      <div className="metadata">
+        <span>Year: {paper.year || 'N/A'}</span>
+        <span>Citations: {paper.citationCount || 0}</span>
+        {paper.doi && <span>DOI: {paper.doi}</span>}
+      </div>
+      {paper.abstract && (
+        <div className="abstract">
+          <strong>Abstract:</strong>
+          <p>{paper.abstract}</p>
+        </div>
+      )}
+    </div>
+  );
+});
+
+function NetworkGraph({ paper, onClose }) {
+  const svgRef = useRef();
+  const containerRef = useRef();
+  const simulationRef = useRef(null);
+  const [error, setError] = useState(null);
+  const [selectedPaper, setSelectedPaper] = useState(null);
+  const [settingsExpanded, setSettingsExpanded] = useState(false);
+  const [settings, setSettings] = useState({
+    relevanceThreshold: 0.01,
+    yearRange: { min: 1900, max: new Date().getFullYear() },
+    minCitations: 0,
+    showReferences: true,
+    showCitations: true,
+    showRelated: true,
+    theme: 'default'
+  });
+
+  const svgRef = useRef();
+  const containerRef = useRef();
+  const simulationRef = useRef(null);
+  const [error, setError] = useState(null);
+  const [selectedPaper, setSelectedPaper] = useState(null);
+  const [settingsExpanded, setSettingsExpanded] = useState(false);
+  const [settings, setSettings] = useState({
+    relevanceThreshold: 0.01,
+    yearRange: { min: 1900, max: new Date().getFullYear() },
+    minCitations: 0,
+    showReferences: true,
+    showCitations: true,
+    showRelated: true,
+    theme: 'default'
+  });
+
+  // Update CSS variables when theme changes
+  useEffect(() => {
+    const theme = THEMES[settings.theme];
+    const root = document.documentElement;
+    
+    root.style.setProperty('--tooltip-bg', theme.background);
+    root.style.setProperty('--tooltip-border', theme.node.stroke);
+    root.style.setProperty('--tooltip-color', theme.node.textColor);
+    
+    root.style.setProperty('--panel-bg', theme.background);
+    root.style.setProperty('--panel-border', theme.node.stroke);
+    root.style.setProperty('--panel-color', theme.node.textColor);
+    
+    root.style.setProperty('--input-bg', theme.background);
+    root.style.setProperty('--input-border', theme.node.stroke);
+    root.style.setProperty('--input-color', theme.node.textColor);
+  }, [settings.theme]);
+
+  // Handle window resize
+  useEffect(() => {
+    let resizeTimeout;
+    const handleResize = () => {
+      if (!containerRef.current || !svgRef.current) return;
+      
+      // Clear the previous timeout
+      if (resizeTimeout) clearTimeout(resizeTimeout);
+      
+      // Debounce resize event
+      resizeTimeout = setTimeout(() => {
+        const container = containerRef.current;
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+
+        // Update SVG dimensions
+        const svg = d3.select(svgRef.current)
+          .attr('width', width)
+          .attr('height', height);
+
+        // Get current transform
+        const currentTransform = d3.zoomTransform(svgRef.current);
+        
+        // Update zoom behavior
+        const zoom = d3.zoom()
+          .scaleExtent([0.1, 4])
+          .on('zoom', (event) => {
+            svg.select('g.zoom-container').attr('transform', event.transform);
+          });
+
+        // Apply the current transform
+        svg.call(zoom.transform, currentTransform);
+      }, 250); // Debounce delay
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (resizeTimeout) clearTimeout(resizeTimeout);
+    };
+  }, []);
+
+  // Graph rendering effect
+  useEffect(() => {
+    if (!paper || !svgRef.current) return;
+    
+    let simulation;
+    try {
+      // Debug logging
+      console.log('Paper data:', paper);
+      console.log('References:', paper.references);
+      console.log('Citations:', paper.citations);
+      
+      // Clear any previous errors
+      setError(null);
+
+      const svg = d3.select(svgRef.current);
+      const container = containerRef.current;
+      
+      // Clear previous content
+      svg.selectAll("*").remove();
+      
+      // Set up SVG dimensions
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      svg
+        .attr('width', width)
+        .attr('height', height);
+
+      // Create zoom container
+      const zoomContainer = svg.append('g')
+        .attr('class', 'zoom-container');
+
+      // Set up zoom behavior
+      const zoom = d3.zoom()
+        .scaleExtent([0.1, 4])
+        .on('zoom', (event) => {
+          zoomContainer.attr('transform', event.transform);
+        });
+
+      svg.call(zoom);
+
+      // Create tooltip
+      const tooltip = d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
+
+      // Process graph data
+      const nodes = [];
+      const links = [];
+      
+      // Add main paper as the first node
+      nodes.push({
+        id: paper.id,
+        title: paper.title,
+        authors: paper.authors,
+        year: paper.year,
+        type: 'main',
+        citationCount: paper.citationCount || 0,
+        abstract: paper.abstract,
+        doi: paper.doi,
+        url: paper.url
+      });
+        id: paper.id,
+        title: paper.title,
+        authors: paper.authors,
+        year: paper.year,
+        type: 'main',
+        citationCount: paper.citationCount || 0
+      });
+
+      // Add references
+      if (settings.showReferences && paper.references) {
+        paper.references.forEach(ref => {
+          if (ref.relevanceScore >= settings.relevanceThreshold &&
+              ref.year >= settings.yearRange.min &&
+              ref.year <= settings.yearRange.max &&
+              ref.citationCount >= settings.minCitations) {
+            nodes.push({
+              id: ref.id,
+              title: ref.title,
+              authors: ref.authors,
+              year: ref.year,
+              type: 'reference',
+              citationCount: ref.citationCount || 0
+            });
+            links.push({
+              source: paper.id,
+              target: ref.id,
+              type: 'reference'
+            });
+          }
+        });
+      }
+
+      // Add citations
+      if (settings.showCitations && paper.citations) {
+        paper.citations.forEach(citation => {
+          if (citation.relevanceScore >= settings.relevanceThreshold &&
+              citation.year >= settings.yearRange.min &&
+              citation.year <= settings.yearRange.max &&
+              citation.citationCount >= settings.minCitations) {
+            nodes.push({
+              id: citation.id,
+              title: citation.title,
+              authors: citation.authors,
+              year: citation.year,
+              type: 'citation',
+              citationCount: citation.citationCount || 0
+            });
+            links.push({
+              source: citation.id,
+              target: paper.id,
+              type: 'citation'
+            });
+          }
+        });
+      }
+
+      // Set up force simulation
+      simulation = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(links).id(d => d.id).distance(100))
+        .force("charge", d3.forceManyBody().strength(-300))
+        .force("center", d3.forceCenter(width / 2, height / 2));
+
+      // Create arrow marker definitions
+      svg.append("defs").selectAll("marker")
+        .data(["reference", "citation"])
+        .enter().append("marker")
+        .attr("id", d => `arrow-${d}`)
+        .attr("viewBox", "0 -5 10 10")
+        .attr("refX", 20)
+        .attr("refY", 0)
+        .attr("markerWidth", 6)
+        .attr("markerHeight", 6)
+        .attr("orient", "auto")
+        .append("path")
+        .attr("d", "M0,-5L10,0L0,5")
+        .attr("class", d => `arrow-${d}`);
+
+      // Draw links
+      const link = zoomContainer.append("g")
+        .attr("class", "links")
+        .selectAll("path")
+        .data(links)
+        .enter().append("path")
+        .attr("class", d => `link ${d.type}`)
+        .attr("marker-end", d => `url(#arrow-${d.type})`);
+
+      // Create node groups
+      const nodeGroup = zoomContainer.append("g")
+        .attr("class", "nodes")
+        .selectAll("g")
+        .data(nodes)
+        .enter().append("g")
+        .attr("class", d => `node ${d.type}`)
+        .call(d3.drag()
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended));
+
+      // Add circles to nodes
+      nodeGroup.append("circle")
+        .attr("r", d => Math.max(5, Math.min(10, Math.sqrt(d.citationCount))))
+        .on("click", (event, d) => {
+          event.stopPropagation();
+          setSelectedPaper(d);
+        });
+
+      // Add labels to nodes
+      nodeGroup.append("text")
+        .attr("dy", -10)
+        .text(d => {
+          const maxLength = 30;
+          return d.title.length > maxLength ? d.title.substring(0, maxLength) + "..." : d.title;
+        });
+
+      // Helper function for drawing curved links
+      function linkArc(d) {
+        const dx = d.target.x - d.source.x;
+        const dy = d.target.y - d.source.y;
+        const dr = Math.sqrt(dx * dx + dy * dy);
+        return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
+      }
+
+      // Add tooltips
+      nodeGroup
+        .on("mouseover", (event, d) => {
+          tooltip.transition()
+            .duration(200)
+            .style("opacity", .9);
+          
+          let formattedAuthors = "";
+          if (d.authors) {
+            if (Array.isArray(d.authors) && d.authors.length > 1) {
+              formattedAuthors = `${d.authors[0]} et al.`;
+            } else if (Array.isArray(d.authors) && d.authors.length === 1) {
+              formattedAuthors = d.authors[0];
+            } else {
+              formattedAuthors = d.authors; // fallback
+            }
+          }
+          let content = `<strong>${d.title}</strong>`;
+          if (formattedAuthors) {
+            content += `<br/><em>${formattedAuthors}</em>`;
+          }
+          if (d.year) {
+            content += `<br/><span class="year">(${d.year})</span>`;
+          }
+          tooltip.html(content)
+            .style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 28) + "px");
+        })
+        .on("mousemove", (event) => {
+          tooltip
+            .style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 28) + "px");
+        })
+        .on("mouseout", () => {
+          tooltip.transition().duration(500).style("opacity", 0);
+        });
+
+      simulation.on("tick", () => {
+        // Update link paths
+        link.attr("d", linkArc);
+
+        // Update node positions
+        nodeGroup.attr("transform", d => `translate(${d.x},${d.y})`);
+
+      });
+
+      function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+      }
+
+      function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+      }
+
+      function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+      }
+
+    } catch (error) {
+      console.error('Error in graph rendering:', error);
+      setError('Error rendering graph: ' + error.message);
+    }
+
+    // Cleanup function
+    return () => {
+      if (simulation) simulation.stop();
+      // Remove tooltip when component unmounts
+      d3.select("body").selectAll(".tooltip").remove();
+      // Clear all SVG content
+      if (svgRef.current) {
+        d3.select(svgRef.current).selectAll("*").remove();
+      }
+    };
+  }, [paper, settings]);
+
+  // Type checking for paper prop
+  if (!paper || typeof paper !== 'object') {
+    return <div className="network-graph">Invalid paper data provided</div>;
+  }
+
+  useEffect(() => {
+    if (!paper) return;
+    
+    let simulation;
+    try {
+      // Debug logging
+      console.log('Paper data:', paper);
+      console.log('References:', paper.references);
+      console.log('Citations:', paper.citations);
+      
+      // Clear any previous errors
+      setError(null);
+
+      // Calculate relevance score based on citations and recency
+      const getRelevanceScore = (paper) => {
+        if (!paper.year) return 0.5; // Default score for papers without year
+        
+        const currentYear = new Date().getFullYear();
+        const yearDiff = Math.max(0, currentYear - paper.year);
+        const recencyScore = Math.exp(-yearDiff / 20); // Exponential decay over 20 years
+        const citationScore = Math.log((paper.citationCount || 0) + 1) / Math.log(100); // Normalize by log(100)
+        
+        return (recencyScore + citationScore) / 2; // Average of both scores
+      };
+
+      const { relevanceThreshold, yearRange, minCitations, showReferences, showCitations, showRelated } = settings;
+
+      // Build nodes and links arrays
+      const nodes = [];
+      const links = [];
+
+      // Add main paper as the first node
+      nodes.push({
+        id: paper.id,
+        title: paper.title,
+        authors: paper.authors,
+        year: paper.year,
+        type: 'main',
+        citationCount: paper.citationCount || 0
+      });
+
+
+
+      // Add references
+      if (settings.showReferences && paper.references) {
+        paper.references.forEach(ref => {
+          if (ref.relevanceScore >= settings.relevanceThreshold &&
+              ref.year >= settings.yearRange.min &&
+              ref.year <= settings.yearRange.max &&
+              ref.citationCount >= settings.minCitations) {
+            nodes.push({
+              id: ref.id,
+              title: ref.title,
+              authors: ref.authors,
+              year: ref.year,
+              type: 'reference',
+              citationCount: ref.citationCount || 0
+            });
+            links.push({
+              source: paper.id,
+              target: ref.id,
+              type: 'reference'
+              });
+            }
+          }
+        });
+      }
+
+      // Add citations as nodes
+      console.log('Processing citations...');
+      if (showCitations && paper.citations && Array.isArray(paper.citations)) {
+        console.log(`Found ${paper.citations.length} citations`);
+        paper.citations.forEach(cit => {
+          if (cit && cit.paperId && cit.year != null && 
+              cit.year >= yearRange.min && cit.year <= yearRange.max && 
+              (cit.citationCount || 0) >= minCitations) {
+            const citData = {
+              id: cit.paperId,
+              title: cit.title,
+              year: cit.year,
+              authors: cit.authors?.map(a => a.name) || [],
+              citationCount: cit.citationCount || 0
+            };
+            const citNode = addNodeAndConnections(citData, 'citation');
+            if (citNode) {
+              links.push({ 
+                source: cit.paperId, 
+                target: paper.id, 
+                type: 'cites',
+                strength: citNode.relevanceScore
+              });
+            }
+          }
+        });
+      }
+
+      // Add citations between papers (cross-references)
+      if (showRelated) {
+        // Only create cross-reference links for papers that are directly connected to the main paper
+        const directlyConnectedIds = new Set(
+          links.map(link => 
+            link.source === paper.id ? link.target : 
+            link.target === paper.id ? link.source : null
+          ).filter(id => id !== null)
+        );
+
+        // Create a map of papers that cite each other
+        const crossCitations = {};
+        paper.references?.forEach(ref1 => {
+          if (!directlyConnectedIds.has(ref1.paperId)) return;
+          paper.references?.forEach(ref2 => {
+            if (ref1.paperId === ref2.paperId) return;
+            if (!directlyConnectedIds.has(ref2.paperId)) return;
+            
+            // Check if these papers actually cite each other
+            const ref1Citations = ref1.citations?.map(c => c.paperId) || [];
+            if (ref1Citations.includes(ref2.paperId)) {
+              const key = [ref1.paperId, ref2.paperId].sort().join('-');
+              if (!crossCitations[key]) {
+                const node1 = nodeMap[ref1.paperId];
+                const node2 = nodeMap[ref2.paperId];
+                if (node1 && node2) {
+                  links.push({
+                    source: ref1.paperId,
+                    target: ref2.paperId,
+                    type: 'related',
+                    strength: Math.min(node1.relevanceScore, node2.relevanceScore) * 0.3
+                  });
+                  crossCitations[key] = true;
+                }
+              }
+            }
+          });
+        });
+      }
+
+      // Check if we have any nodes to display
+      console.log('Final network data:', { nodes, links });
+      if (nodes.length === 0) {
+        // Display a message if no nodes are available
+        const svg = d3.select(svgRef.current);
+        svg.selectAll("*").remove();
+        svg.append('text')
+          .attr('x', 400)
+          .attr('y', 300)
+          .attr('text-anchor', 'middle')
+          .text('No connected papers found');
+        return;
+      }
+
+      // Dimensions
+      const width = 800;
+      const height = 600;
+
+      // Clear existing SVG content
+      d3.select(svgRef.current).selectAll("*").remove();
+
+      // Create zoom behavior
+      const zoom = d3.zoom()
+        .scaleExtent([0.1, 4])
+        .on('zoom', (event) => {
+          g.attr('transform', event.transform);
+        });
+
+      const svg = d3.select(svgRef.current)
+        .attr("width", width)
+        .attr("height", height)
+        .style('background', THEMES[settings.theme].background)
+        .call(zoom);
+
+      // Add a group for the zoom container
+      const g = svg.append('g')
+        .attr('class', 'zoom-container');
+
+      // Center the initial view
+      svg.call(zoom.transform, d3.zoomIdentity
+        .translate(width/2, height/2)
+        .scale(1));
+
+      // Add zoom controls
+      const zoomControls = svg.append('g')
+        .attr('class', 'zoom-controls')
+        .attr('transform', 'translate(20, 20)');
+
+      // Zoom in button
+      zoomControls.append('rect')
+        .attr('class', 'zoom-button')
+        .attr('x', 0)
+        .attr('y', 0)
+        .attr('width', 30)
+        .attr('height', 30)
+        .attr('rx', 5)
+        .style('fill', '#fff')
+        .style('stroke', '#999')
+        .style('cursor', 'pointer')
+        .on('click', () => {
+          svg.transition().duration(300).call(zoom.scaleBy, 1.3);
+        });
+
+      zoomControls.append('text')
+        .attr('x', 15)
+        .attr('y', 20)
+        .attr('text-anchor', 'middle')
+        .style('font-size', '20px')
+        .style('pointer-events', 'none')
+        .style('fill', THEMES[settings.theme].node.textColor)
+        .text('+');
+
+      // Zoom out button
+      zoomControls.append('rect')
+        .attr('class', 'zoom-button')
+        .attr('x', 0)
+        .attr('y', 40)
+        .attr('width', 30)
+        .attr('height', 30)
+        .attr('rx', 5)
+        .style('fill', '#fff')
+        .style('stroke', '#999')
+        .style('cursor', 'pointer')
+        .on('click', () => {
+          svg.transition().duration(300).call(zoom.scaleBy, 0.7);
+        });
+
+      zoomControls.append('text')
+        .attr('x', 15)
+        .attr('y', 60)
+        .attr('text-anchor', 'middle')
+        .style('font-size', '20px')
+        .style('pointer-events', 'none')
+        .style('fill', THEMES[settings.theme].node.textColor)
+        .text('−');
+
+      // Tooltip
+      const tooltip = d3.select("body")
+        .append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
+
+      // Set up force simulation
+      simulation = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(links).id(d => d.id).distance(100))
+        .force("charge", d3.forceManyBody().strength(-300))
+        .force("center", d3.forceCenter(width / 2, height / 2));
+
+
+      // Define arrow markers for each theme type
+      const markerWidth = 8, markerHeight = 8;
+      
+      // Add arrow marker definitions
+      const defs = svg.append("defs");
+      
+      // Regular citation arrow
+      defs.append("marker")
+        .attr("id", "arrow")
+        .attr("viewBox", "0 -5 10 10")
+        .attr("refX", markerWidth)
+        .attr("refY", 0)
+        .attr("markerWidth", markerWidth)
+        .attr("markerHeight", markerHeight)
+        .attr("orient", "auto")
+        .append("path")
+        .attr("d", "M0,-5L10,0L0,5")
+        .attr("fill", THEMES[settings.theme].link.stroke);
+
+      // Related papers arrow
+      defs.append("marker")
+        .attr("id", "arrow-related")
+        .attr("viewBox", "0 -5 10 10")
+        .attr("refX", markerWidth)
+        .attr("refY", 0)
+        .attr("markerWidth", markerWidth)
+        .attr("markerHeight", markerHeight)
+        .attr("orient", "auto")
+        .append("path")
+        .attr("d", "M0,-5L10,0L0,5")
+        .attr("fill", THEMES[settings.theme].link.highlightStroke);
+
+      // Links with varying styles and arrows
+      const link = g.append("g")
+        .attr("class", "links")
+        .selectAll("path")
+        .data(links)
+        .enter().append("path")
+        .attr("stroke-width", d => 1 + d.strength * 2)
+        .attr("stroke", d => d.type === 'related' ? THEMES[settings.theme].link.highlightStroke : THEMES[settings.theme].link.stroke)
+        .attr("stroke-dasharray", d => d.type === 'related' ? '5,5' : 'none')
+        .attr("opacity", d => 0.2 + d.strength * 0.8)
+        .attr("marker-end", d => d.type === 'related' ? "url(#arrow-related)" : "url(#arrow)");
+
+      // Helper function to create curved paths
+      const linkArc = d => {
+        const dx = d.target.x - d.source.x;
+        const dy = d.target.y - d.source.y;
+        const dr = Math.sqrt(dx * dx + dy * dy);
+        // Adjust source and target points to account for node radius and arrow
+        const sourceRadius = d.source.isCentral ? 15 : 8 + (d.source.relevanceScore * 5);
+        const targetRadius = d.target.isCentral ? 15 : 8 + (d.target.relevanceScore * 5);
+        const offsetRatio = (sourceRadius + targetRadius + markerHeight) / dr;
+        const offsetX = dx * offsetRatio;
+        const offsetY = dy * offsetRatio;
+        
+        return `M${d.source.x},${d.source.y}
+L${d.target.x - (dx * targetRadius/dr)},${d.target.y - (dy * targetRadius/dr)}`;
+      };
+
+      // Nodes with varying sizes based on relevance
+      const nodeGroup = g.append("g")
+        .attr("class", "nodes")
+        .selectAll(".node")
+        .data(nodes)
+        .enter().append("g")
+        .attr("class", "node");
+
+      // Circle for each node (draggable and clickable)
+      const node = nodeGroup.append("circle")
+        .attr("r", d => d.isCentral ? 15 : 8 + (d.relevanceScore * 5))
+        .attr("fill", d => d.isCentral ? THEMES[settings.theme].node.highlightFill : THEMES[settings.theme].node.fill)
+        .attr("stroke", d => d.isCentral ? THEMES[settings.theme].node.highlightStroke : THEMES[settings.theme].node.stroke)
+        .attr("stroke-width", 2)
+        .style("cursor", "pointer")
+        .on("click", (event, d) => {
+          event.stopPropagation(); // Prevent svg click handler from firing
+          setSelectedPaper(d);
+        })
+        .call(d3.drag()
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended));
+
+      // Format authors for display
+      const formatAuthors = d => {
+        if (!d.authors) return '';
+        if (Array.isArray(d.authors)) {
+          if (d.authors.length > 1) {
+            return `${d.authors[0]} et al.`;
+          } else if (d.authors.length === 1) {
+            return d.authors[0];
+          }
+        }
+        return d.authors;
+      };
+
+      // Author label for each node
+      nodeGroup.append("text")
+        .attr("dy", d => d.isCentral ? -20 : -15)
+        .attr("text-anchor", "middle")
+        .style("fill", THEMES[settings.theme].node.textColor)
+        .style("font-size", "10px")
+        .style("pointer-events", "none")
+        .text(formatAuthors);
+
+      // Year label for each node
+      nodeGroup.append("text")
+        .attr("dy", d => d.isCentral ? 25 : 20)
+        .attr("text-anchor", "middle")
+        .style("fill", THEMES[settings.theme].node.textColor)
+        .style("font-size", "10px")
+        .style("pointer-events", "none")
+        .text(d => d.year || '');
+
+      // Add tooltips to the node circles
+      node.on("mouseover", (event, d) => {
+          tooltip.transition().duration(200).style("opacity", 0.9);
+          let formattedAuthors = "";
+          if (d.authors) {
+            if (Array.isArray(d.authors) && d.authors.length > 1) {
+              formattedAuthors = `${d.authors[0]} et al.`;
+            } else if (Array.isArray(d.authors) && d.authors.length === 1) {
+              formattedAuthors = d.authors[0];
+            } else {
+              formattedAuthors = d.authors; // fallback
+            }
+          }
+          let content = `<strong>${d.title}</strong>`;
+          if (formattedAuthors) {
+            content += `<br/><em>${formattedAuthors}</em>`;
+          }
+          if (d.year) {
+            content += `<br/><span class="year">(${d.year})</span>`;
+          }
+          tooltip.html(content)
+            .style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 28) + "px");
+        })
+        .on("mousemove", (event) => {
+          tooltip
+            .style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 28) + "px");
+        })
+        .on("mouseout", () => {
+          tooltip.transition().duration(500).style("opacity", 0);
+        });
+
+      simulation.on("tick", () => {
+        // Update link paths
+        link.attr("d", linkArc);
+
+        // Update node positions
+        nodeGroup.attr("transform", d => `translate(${d.x},${d.y})`);
+
+      });
+
+      function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+      }
+
+      function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+      }
+
+      function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+      }
+
+    } catch (error) {
+      console.error('Error in graph rendering:', error);
+      setError('Error rendering graph: ' + error.message);
+    }
+
+    // Cleanup function
+    return () => {
+      if (simulation) simulation.stop();
+      // Remove tooltip when component unmounts
+      d3.select("body").selectAll(".tooltip").remove();
+      // Clear all SVG content
+      if (svgRef.current) {
+        d3.select(svgRef.current).selectAll("*").remove();
+      }
+    };
+  }, [paper, settings]);
+
+
+  // Settings Panel Component
+  const SettingsPanel = React.memo(({ settings, setSettings, settingsExpanded, setSettingsExpanded }) => {
+    return (
+      <div className="settings-panel">
+
+        <div className="settings-header">
+          <h3>Graph Settings</h3>
+          <button 
+            onClick={() => setSettingsExpanded(!settingsExpanded)}
+            style={{ 
+              padding: '4px 8px',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              opacity: 0.6
+            }}
+          >
+            {settingsExpanded ? '−' : '+'}
+          </button>
+        </div>
+
+        {settingsExpanded && (
+          <div className="settings-grid">
+            <div className="setting-group">
+              <label>Relevance</label>
+              <input
+                type="range"
+                min="0"
+                max="0.5"
+                step="0.01"
+                value={settings.relevanceThreshold}
+                onChange={(e) => setSettings(prevSettings => ({
+                  ...prevSettings,
+                  relevanceThreshold: parseFloat(e.target.value)
+                }))}
+              />
+            </div>
+
+            <div className="setting-group">
+              <label>Year Range</label>
+              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                <input
+                  type="number"
+                  value={settings.yearRange.min}
+                  style={{ width: '70px' }}
+                  onChange={(e) => setSettings(prevSettings => ({
+                    ...prevSettings,
+                    yearRange: { ...prevSettings.yearRange, min: parseInt(e.target.value) }
+                  }))}
+                />
+                <span style={{ opacity: 0.5 }}>–</span>
+                <input
+                  type="number"
+                  value={settings.yearRange.max}
+                  style={{ width: '70px' }}
+                  onChange={(e) => setSettings(prevSettings => ({
+                    ...prevSettings,
+                    yearRange: { ...prevSettings.yearRange, max: parseInt(e.target.value) }
+                  }))}
+                />
+              </div>
+            </div>
+
+            <div className="setting-group">
+              <label>Min Citations</label>
+              <input
+                type="number"
+                value={settings.minCitations}
+                style={{ width: '70px' }}
+                onChange={(e) => setSettings(prevSettings => ({
+                  ...prevSettings,
+                  minCitations: parseInt(e.target.value)
+                }))}
+              />
+            </div>
+
+            <div className="setting-group">
+              <label>Theme</label>
+              <select
+                value={settings.theme}
+                onChange={(e) => setSettings(prevSettings => ({
+                  ...prevSettings,
+                  theme: e.target.value
+                }))}
+              >
+                {Object.keys(THEMES).map(theme => (
+                  <option key={theme} value={theme}>
+                    {theme.charAt(0).toUpperCase() + theme.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <div className="setting-group">
+                <input
+                  type="checkbox"
+                  id="showRefs"
+                  checked={settings.showReferences}
+                  onChange={(e) => setSettings(prevSettings => ({
+                    ...prevSettings,
+                    showReferences: e.target.checked
+                  }))}
+                  style={{ display: 'none' }}
+                />
+                <label htmlFor="showRefs">References</label>
+              </div>
+
+              <div className="setting-group">
+                <input
+                  type="checkbox"
+                  id="showCites"
+                  checked={settings.showCitations}
+                  onChange={(e) => setSettings(prevSettings => ({
+                    ...prevSettings,
+                    showCitations: e.target.checked
+                  }))}
+                  style={{ display: 'none' }}
+                />
+                <label htmlFor="showCites">Citations</label>
+              </div>
+
+              <div className="setting-group">
+                <input
+                  type="checkbox"
+                  id="showRelated"
+                  checked={settings.showRelated}
+                  onChange={(e) => setSettings(prevSettings => ({
+                    ...prevSettings,
+                    showRelated: e.target.checked
+                  }))}
+                  style={{ display: 'none' }}
+                />
+                <label htmlFor="showRelated">Related</label>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  });
+
+  return (
+    <div className="network-graph" ref={containerRef}>
+      <svg 
+        ref={svgRef}
+        style={{ width: '100%', height: '100%' }}
+        onClick={() => setSelectedPaper(null)} // Close panel when clicking outside
+      ></svg>
+      <SettingsPanel
+        settings={settings}
+        setSettings={setSettings}
+        settingsExpanded={settingsExpanded}
+        setSettingsExpanded={setSettingsExpanded}
+      />
+      {error && <div className="error">{error}</div>}
+      {selectedPaper && <PaperInfoPanel paper={selectedPaper} onClose={() => setSelectedPaper(null)} />}
+    </div>
+  );
+}
+
+export default NetworkGraph;

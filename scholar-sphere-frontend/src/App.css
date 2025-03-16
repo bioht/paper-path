@@ -1,0 +1,484 @@
+/* src/App.css */
+:root {
+  --primary-color: #EB5B00;
+  --secondary-color: #640D5F;
+  --text-light: #FFFFFF;
+  --text-dark: #333333;
+  --gradient: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.1);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.15);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.2);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.main-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: transparent;
+  padding: 1rem;
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.main-nav .auth-buttons {
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.5rem 1rem;
+  border-radius: 25px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.auth-buttons {
+  display: flex;
+  gap: 1rem;
+}
+
+.nav-button {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  text-decoration: none;
+  color: var(--text-light);
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border: none;
+  background: var(--gradient);
+}
+
+.nav-button:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Hide nav on login/signup pages */
+.login-page .main-nav,
+.signup-page .main-nav {
+  display: none;
+}
+
+.app-container {
+  padding-top: 70px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #f8f9fa;
+  color: var(--text-dark);
+}
+
+.app-container {
+  min-height: 100vh;
+  width: 100%;
+  background: var(--gradient);
+  padding: 2rem 1rem;
+}
+
+.paper-header {
+  max-width: 1200px;
+  margin: 0 auto 1rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 16px;
+  box-shadow: var(--shadow-md);
+}
+
+.paper-header h1 {
+  font-size: 2rem;
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+  line-height: 1.3;
+}
+
+.paper-header .abstract {
+  white-space: pre-wrap;
+  overflow: visible;
+  line-height: 1.6;
+  margin-top: 1rem;
+  color: var(--text-dark);
+  font-size: 1rem;
+}
+
+.paper-header .authors {
+  font-size: 1.1rem;
+  color: var(--secondary-color);
+  margin-bottom: 1rem;
+}
+
+.paper-header .abstract {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-dark);
+  margin-bottom: 1.5rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.paper-header .back-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  color: var(--primary-color);
+  background: transparent;
+  border: 2px solid var(--primary-color);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.paper-header .back-button:hover {
+  background: var(--primary-color);
+  color: white;
+  transform: translateX(-5px);
+}
+
+.App {
+  max-width: 1200px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 24px;
+  box-shadow: var(--shadow-lg);
+  padding: 2rem;
+  min-height: calc(100vh - 4rem);
+}
+
+.App h1 {
+  text-align: center;
+  color: var(--primary-color);
+  font-size: 2.5rem;
+  margin-bottom: 2rem;
+  font-weight: 800;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  padding: 1rem;
+}
+
+/* Search Interface */
+.search-container {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.search-box {
+  background: white;
+  padding: 1rem;
+  border-radius: 16px;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.search-input {
+  flex: 1;
+  padding: 1rem 1.5rem;
+  font-size: 1.1rem;
+  border: 2px solid #e1e1e1;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  color: var(--text-dark);
+}
+
+.search-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow-sm);
+  outline: none;
+}
+
+.search-button {
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-light);
+  background: var(--gradient);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.search-button:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Search Results Container */
+.search-results {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem 0;
+}
+
+/* Individual result card */
+.result-card {
+  width: 100%;
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease;
+  border: 1px solid #e1e1e1;
+  cursor: pointer;
+}
+
+/* Hover effect */
+.result-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-color);
+}
+
+/* Title */
+.result-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--primary-color);
+  margin-bottom: 0.5rem;
+}
+
+/* Authors */
+.result-authors {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+/* Year */
+.result-year {
+  font-size: 0.9rem;
+  color: var(--secondary-color);
+  font-weight: 500;
+}
+
+/* Abstract: no truncation, full wrapping */
+.result-abstract {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #444;
+  margin-top: 16px;
+  /* Remove or comment out any line-clamp properties */
+  /* display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden; */
+
+  /* Instead, allow full wrapping */
+  white-space: normal;        /* or pre-wrap if you want to preserve existing line breaks */
+  overflow-wrap: break-word;  /* ensures long words wrap properly */
+}
+
+.result-journal {
+  font-size: 1rem;
+  color: var(--secondary-color);
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+
+/* Paper Details View */
+.paper-view {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  margin-top: 2rem;
+  box-shadow: var(--shadow-md);
+}
+
+.paper-details {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  color: var(--primary-color);
+  background: transparent;
+  border: 2px solid var(--primary-color);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 2rem;
+}
+
+.back-button:hover {
+  background: var(--primary-color);
+  color: white;
+  transform: translateX(-5px);
+}
+
+.paper-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 1rem;
+  line-height: 1.3;
+}
+
+.paper-authors {
+  font-size: 1.1rem;
+  color: var(--secondary-color);
+  margin-bottom: 1rem;
+}
+
+.paper-year {
+  font-size: 1rem;
+  color: #666;
+  margin-bottom: 2rem;
+}
+
+.paper-abstract {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+}
+
+.paper-abstract h3 {
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+}
+
+.paper-abstract p {
+  line-height: 1.6;
+  color: var(--text-dark);
+  font-size: 1rem;
+}
+
+.network-view {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid #e1e1e1;
+}
+
+.network-view h3 {
+  text-align: center;
+  color: var(--secondary-color);
+  margin-bottom: 2rem;
+  font-size: 1.5rem;
+}
+
+
+
+
+.paper-authors {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 5px 0;
+}
+
+.paper-year {
+  color: #7f8c8d;
+  font-size: 0.9rem;
+  margin: 5px 0;
+}
+
+.paper-abstract {
+  color: #666;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 10px 0 0 0;
+  overflow: hidden;
+}
+.paper-journal {
+  font-size: 1rem;
+  color: var(--secondary-color);
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+.error {
+  color: #e74c3c;
+  text-align: center;
+  padding: 1rem;
+  margin: 1rem 0;
+  background-color: #fde8e7;
+  border-radius: 8px;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 2rem 0;
+  gap: 15px;
+}
+
+.pagination button {
+  padding: 10px 20px;
+  font-size: 1rem;
+  background-color: var(--primary-color); /* Uses your primary color (#EB5B00) */
+  color: white;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.pagination button:hover:not(:disabled) {
+  background-color: var(--secondary-color); /* Uses your secondary color (#640D5F) */
+  transform: translateY(-2px);
+}
+
+.pagination button:disabled {
+  background-color: #bdc3c7;
+  cursor: not-allowed;
+}
+
+.pagination span {
+  font-size: 1rem;
+  color: var(--text-dark);
+}
+
+
+.network-view {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 2rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.network-view svg {
+  width: 100%;
+  height: 600px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+}
+
+.loading {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+}
+
+.loading-spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 1rem auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

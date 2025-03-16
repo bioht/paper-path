@@ -157,10 +157,18 @@ def transform_paper(paper):
             'references':[ref.split('/')[-1] for ref in paper.get('referenced_works') or []]
         }
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='../scholar-sphere-frontend/build', static_url_path='/')
 
 # Configure CORS
 CORS(app)
+
+@app.route('/')
+def serve():
+    return app.send_static_file('index.html')
+
+@app.errorhandler(404)
+def not_found(e):
+    return app.send_static_file('index.html')
 
 # Configure requests with retries and backoff
 retry_strategy = Retry(
